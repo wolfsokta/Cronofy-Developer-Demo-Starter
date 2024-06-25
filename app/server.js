@@ -3,6 +3,8 @@ const dotenv = require("dotenv");
 const express = require("express");
 const bodyParser = require("body-parser");
 
+const Cronofy = require("cronofy");
+
 // Enable dotenv
 dotenv.config();
 
@@ -17,6 +19,11 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(__dirname + "/"));
 
 // Add the Cronofy client setup here
+const cronofyClient = new Cronofy({
+    client_id: process.env.CLIENT_ID,
+    client_secret: process.env.CLIENT_SECRET,
+    data_center: process.env.DATA_CENTER,
+});
 
 // Route: home
 app.get("/", async (req, res) => {
