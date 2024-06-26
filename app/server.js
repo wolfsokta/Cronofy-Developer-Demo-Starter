@@ -27,9 +27,18 @@ const cronofyClient = new Cronofy({
 
 // Route: home
 app.get("/", async (req, res) => {
+    
+    const token = await cronofyClient.requestElementToken({
+        version: "1",
+        permissions: ["account_management"],
+        subs: [process.env.SUB],
+        origin: "http://localhost:7070"
+    }).catch((err) => {
+        console.error(err);
+    });
+
     // Extract the access token "code" from the page's query string
     const codeFromQuery = req.query.code;
-
     if (codeFromQuery) {
         // If the code is present, exchange it for an access token
         const codeResponse = await cronofyClient.requestAccessToken({
@@ -44,11 +53,10 @@ app.get("/", async (req, res) => {
     
     // Homepage code goes here
     return res.render("home", {
-        token: codeFromQuery,
+        element_token: token.element_token.token,
         client_id: process.env.CLIENT_ID,
         data_center: process.env.DATA_CENTER,
     });
-    // res.send("Hello World");
     
 });
 
