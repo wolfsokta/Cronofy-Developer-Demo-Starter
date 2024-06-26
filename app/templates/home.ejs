@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <javascript src="https://elements.cronofy.com/js/CronofyElements.v1.59.4.js"></javascript>
     <title>Cronofy Developer Demo</title>
 
     <link href="/app.css" rel="stylesheet">
@@ -25,8 +24,20 @@
 
         </div>
 
+        <div class="element__wrapper">
+            <div id="cronofy-calendar-sync"></div>
+        </div>
+        <javascript src="https://elements.cronofy.com/js/CronofyElements.v1.59.4.js"></javascript>
         <script>
-            /* UI Element initialization code goes here */
+            CronofyElements.CalendarSync({
+                target_id: 'cronofy-calendar-sync',
+                data_center: "<%= data_center %>",
+                authorization: {
+                    redirect_uri: "http://localhost:7070",
+                    client_id: "<%= client_id %>",
+                    scope: "read_write"
+                }
+            })
         </script>
 
         <footer class="footer">

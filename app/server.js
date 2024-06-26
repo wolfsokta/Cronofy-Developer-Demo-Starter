@@ -27,12 +27,29 @@ const cronofyClient = new Cronofy({
 
 // Route: home
 app.get("/", async (req, res) => {
-    // Homepage code goes here
+    // Extract the access token "code" from the page's query string
+    const codeFromQuery = req.query.code;
 
+    if (codeFromQuery) {
+        // If the code is present, exchange it for an access token
+        const codeResponse = await cronofyClient.requestAccessToken({
+            client_id: process.env.CLIENT_ID,
+            client_secret: process.env.CLIENT_SECRET,
+            grant_type: "authorization_code",
+            code: codeFromQuery,
+            redirect_uri: "http://localhost:7070",
+        });
+        console.log(codeResponse);
+    }
+    
+    // Homepage code goes here
     return res.render("home", {
-        token: "YOUR_TOKEN_GOES_HERE",
+        token: codeFromQuery,
         client_id: process.env.CLIENT_ID,
+        data_center: process.env.DATA_CENTER,
     });
+    // res.send("Hello World");
+    
 });
 
 // Route: availability

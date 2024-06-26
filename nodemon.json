@@ -1,0 +1,7 @@
+{
+    "ext": "js,mjs,cjs,json,ejs",
+    "ignore": ["node_modules/"],
+    "env": {
+      "NODE_ENV": "development"
+    }
+  }
