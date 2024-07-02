@@ -182,12 +182,8 @@ app.get("/submit", async (req, res) => {
             targetSubject = user.sub;
         });
     }
-    // console.log("New event on calendar ID: ", calendarId)
-    
-    
-    
+
     let error = '';
-    
     try 
     {
         // Ensure our client has a valid access token.
