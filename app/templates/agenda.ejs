@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Availability: Cronofy Developer Demo</title>
+    <title>Agenda: Cronofy Developer Demo</title>
 
     <link href="/app.css" rel="stylesheet">
 </head>
@@ -14,57 +14,21 @@
 
             <a href="/" class="link--secondary">Back to homepage</a>
             
-            <h1>View and set  your availability</h1>
-            <p>Select dates and times when you're available to work</p>
+            <h1>Agenda</h1>
                 
             <div class="element__wrapper">
-                <div id="cronofy-availability-viewer"></div>
+                <div id="cronofy-agenda"></div>
             </div>
 
         </div>
+     
 
         <script src="https://elements.cronofy.com/js/CronofyElements.v1.59.4.js"></script>
         <script>
-            
-            const period = <%- JSON.stringify(period) %>;
-            
-            CronofyElements.AvailabilityViewer({
+            CronofyElements.Agenda({
                 element_token: "<%= element_token %>",
-                data_center: "<%= data_center %>",
-                target_id: "cronofy-availability-viewer",
-                availability_query: {
-                    participants: [
-                    {
-                        required: "all",
-                        members: [
-                            { 
-                                sub: "<%= sub %>",
-                                managed_availability: true
-                             }
-                        ]
-                    }
-                ],
-                required_duration: { minutes: 15 },
-                available_periods: [
-                    { start: period.start, end: period.end },
-                ]
-            
-                },
-                config: {
-                    start_time: "08:00",
-                    end_time: "19:00",
-                    interval: 15,
-                    mode: "free_select"
-                },
-                callback: (data) => {
-                    console.log("Type: ", data.notification.type);
-
-                    if (data.notification.type === "query_periods_edited") {
-                        console.log("Redirecting to update periods");
-                        window.location.href = `/updateAvailability?query_periods=${JSON.stringify(data.notification.query_periods)}`;
-                    }
-                }
-            });
+                target_id: "cronofy-agenda"
+             });
         </script>
 
         <footer class="footer">

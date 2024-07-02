@@ -9,6 +9,8 @@ const moment = require("moment");
 
 const dateUtils = require("./dateUtils");
 
+const subMap = require("./subList");
+
 // Enable dotenv
 dotenv.config();
 
@@ -46,7 +48,6 @@ app.get("/", async (req, res) => {
         }).catch((err) => {
             console.error(err);
         });
-        console.log(token);
     }
 
     // Extract the access token "code" from the page's query string
@@ -62,10 +63,20 @@ app.get("/", async (req, res) => {
         });
         console.log(codeResponse);
     }
+
+    // Log the user Info
+    refreshToken();
+    // cronofyClient.userInfo()
+    // .then(response => {
+    //     console.log('User Info:', response);
+    // })
+    // .catch(err => {
+    //     console.error('Error fetching user info:', err);
+    // });
     
     // Homepage code goes here
     return res.render("home", {
-        element_token: token.element_token.token || '',
+        element_token: token?.element_token?.token || '',
         client_id: process.env.CLIENT_ID,
         data_center: process.env.DATA_CENTER,
         sub: process.env.SUB
@@ -84,8 +95,16 @@ app.get("/availability_grid", async (req, res) => {
     }).catch((err) => {
         console.error(err);
     });
-    console.log(token);
 
+    // List current AvailabilityPeriods
+    cronofyClient.listAvailablePeriods()
+    .then(response => {
+        console.log('Available Periods:', response.available_periods);
+    })
+    .catch(err => {
+        console.error('Error fetching available periods:', err);
+    });
+    
     // Get availability periods
     const period = dateUtils.getTwoWeekPeriod();
 
@@ -98,22 +117,39 @@ app.get("/availability_grid", async (req, res) => {
     });
 });
 
+app.get("/agenda", async (req, res) => {
+    // Availability code goes here
+    const token = await cronofyClient.requestElementToken({
+        version: "1",
+        permissions: ["agenda"],
+        subs: [process.env.SUB],
+        origin: "http://localhost:7070"
+    }).catch((err) => {
+        console.error(err);
+    });
+
+    return res.render("agenda", {
+        element_token: token.element_token.token,
+    });
+});
+
 // Route: availability
 app.get("/availability", async (req, res) => {
     // Availability code goes here
     const token = await cronofyClient.requestElementToken({
         version: "1",
         permissions: ["availability"],
-        subs: [process.env.SUB],
+        subs: [ "apc_667dcf10824ece9a9d03f09e", 
+                "apc_667dd62f79c3b2821cc0ef1d", 
+                "apc_667e23bca2ce8c75e40e4f99",
+                "apc_667e24aea2ce8ce1d454f6c6"],
         origin: "http://localhost:7070"
     }).catch((err) => {
         console.error(err);
     });
-    console.log(token);
 
      // Get availability periods
-     const period = dateUtils.getTwoWeekPeriod();
-     console.log(period)
+    const period = dateUtils.getTwoWeekPeriod();
 
     return res.render("availability", {
         element_token: token.element_token.token,
@@ -132,21 +168,46 @@ app.get("/submit", async (req, res) => {
     const slot = JSON.parse(req.query.slot);
     console.log("Parsed: ", slot);
 
-    // const userInfo = await cronofyClient.userInfo();
-    // const calendarId = userInfo["cronofy.data"].profiles[0].profile_calendars[0].calendar_id;
-    // Setting this in Config because of my sub's crazy calendar setup
+    const userInfo = await cronofyClient.userInfo();
+    const userCalendarId = userInfo["cronofy.data"].profiles[0].profile_calendars[0].calendar_id;
+    let calendarId = undefined;
+
+    // loop through the subs are available for this slot. Booking the first one that is not the current user.
+    if (slot.participants.length <= 1) {
+        calendarId = slot.participants[0].application_calendar_id;
+    } else {
+    
+        slot.participants.forEach( (user, index) => { 
+            if (userCalendarId === user.application_calendar_id) {
+                return;
+            }
+            calendarId = user.application_calendar_id;
+        });
+    }
+    console.log("New event on calendar ID: ", calendarId)
+
+    // For now just create the event on the logged in user's calendar.
+    calendarId = userCalendarId;
     
     // Ensure our client has a valid access token
     await refreshToken();
     
-    cronofyClient.createEvent({
-        calendar_id: process.env.CALENDAR_ID,
-        event_id: `process.env.CALENDAR_ID::${slot.start}`,
-        summary: "Demo meeting",
-        description: "The Cronofy developer demo has created this event",
-        start: slot.start,
-        end: slot.end
-    });
+    let error = '';
+
+    try 
+    {
+        await cronofyClient.createEvent({
+            calendar_id: calendarId,
+            event_id: `${calendarId}::${slot.start}`,
+            summary: "Demo meeting",
+            description: "The Cronofy developer demo has created this event",
+            start: slot.start,
+            end: slot.end
+        });
+    } catch (err) {
+        console.error("Error creating event: ", err);
+        error = err.statusCode;
+    }
 
     const meetingDate = moment(slot.start).format("DD MMM YYYY");
     const start = moment(slot.start).format("LT");
@@ -155,8 +216,101 @@ app.get("/submit", async (req, res) => {
     return res.render("submit", {
         meetingDate,
         start,
-        end
+        end,
+        error,
     });
+});
+
+app.get("/accounts", async (req, res) => {
+
+    // Get the list of application accounts from the Cronofy API
+    // cronofyClient.listCalendars()
+    //     .then(response => {
+    //         console.log('Account Information:', response);
+    //     })
+    //     .catch(err => {
+    //         console.error('Error fetching account information:', err);
+    //     });
+    
+    let message = req.query.message || "";
+    if (message) {
+        message = decodeURIComponent(message);
+    }
+
+    return res.render("accounts", {message: message});
+});
+
+app.post("/createAccount", async (req, res) => {
+
+    // get the shedID from the form
+    const shedId = req.body.shedId;
+    console.log("Creating account for shedId: ", shedId);
+    const response = createCalAccount(shedId);
+
+    const message = response.error ? "Error creating account" : "Account created successfully";
+
+    res.redirect("/accounts?message=" + encodeURIComponent(message));
+});
+
+app.get("/updateAvailability", async (req, res) => {
+    
+    const queryPeriods = req.query.query_periods;
+    console.log("Updating availability with", queryPeriods);
+    if (queryPeriods) {
+        // First get the existing available periods
+        let currentPeriods = undefined
+        try {
+            currentPeriods = await cronofyClient.listAvailablePeriods();
+            console.log("Current periods: ", currentPeriods);
+        }
+        catch (err) {
+            console.error('Error fetching available periods:', err);
+        }
+
+        // parse the queryPeriods and retrieve the start and end times
+        const periodsArray = JSON.parse(queryPeriods);
+        console.log("Parsed periods: ", periodsArray);
+
+        // loop through the periodsArray calling upsertAvailablePeriods
+        
+        
+        for (const period of periodsArray) {
+            const periodIdPrefix = `shed_1-${period.start}`
+            // await call upsertAvailabePeriods
+            // check to see if the period already exists and if it does remove it instead of updating it
+            let removedExisting = false;
+            if (currentPeriods) {
+                for (const existingPeriod of currentPeriods.available_periods) {
+                    if (existingPeriod.available_period_id.startsWith(periodIdPrefix)) {
+                        console.log("Removing existing period: ", existingPeriod);
+                        removedExisting = true;
+                        await cronofyClient.deleteAvailablePeriods({
+                            available_period_id: existingPeriod.available_period_id
+                        }).then((response) => {
+                            console.log("Removed availability: ", response);
+                        }).catch((err) => {
+                            console.error("Error removing availability: ", err);
+                        });
+                    }
+                }
+            }
+            
+            if (!removedExisting) {
+                await cronofyClient.upsertAvailablePeriod({
+                    available_period_id: `${periodIdPrefix}-${period.end}`,
+                    start: period.start,
+                    end: period.end
+                }).then((response) => {
+                    console.log("Updated availability: ", response);
+                }).catch((err) => {
+                    console.error("Error updating availability: ", err);
+                });
+            }
+        }
+       
+    }
+    // const message = response.error ? "Error creating account" : "Account created successfully";
+    res.redirect("/availability_grid?message=" + encodeURIComponent(queryPeriods));
 });
 
 function refreshAccessToken() {
@@ -185,6 +339,51 @@ function refreshAccessToken() {
             console.error("Error refreshing access token: ", err);
         });
     }
+}
+
+function setAccessToken(sub) {
+    const refreshToken = subMap.get(sub).refreshToken;
+    
+    return async function() {
+        await cronofyClient.requestAccessToken({
+            client_id: process.env.CLIENT_ID,
+            client_secret: process.env.CLIENT_SECRET,
+            refresh_token: refreshToken
+        }).then((response) => {
+            console.log("Access token created: ", response);
+            obtainedAt = new Date();
+            expiresIn = response.expires_in;
+            expiresAt = new Date(obtainedAt.getTime() + (expiresIn * 1000));
+            console.log ("Expires at: ", expiresAt);
+            cronofyClient.config.access_token = response.access_token;
+        }).catch((err) => {
+            console.error("Error setting access token: ", err);
+        });
+
+    }
+}
+
+function createCalAccount(shedId) {
+    let response = {
+        applicationCalendar: null,
+        error: null
+    }
+    
+    const options = { 
+        application_calendar_id: shedId
+    }
+    
+    cronofyClient.applicationCalendar(options)
+    .then((applicationCalendar) => { 
+        console.log("Created calendar account: ", applicationCalendar);
+        response.applicationCalendar = applicationCalendar;
+
+    }).catch((err) => {
+        console.error("Error creating calendar account: ", err);
+        response.error = err;
+    });
+
+    return response;
 }
 
 app.listen(PORT);

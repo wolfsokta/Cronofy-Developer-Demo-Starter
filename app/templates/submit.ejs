@@ -12,16 +12,26 @@
     <div class="wrapper__outer">
         <div class="wrapper__inner">
 
+            <script>
+                const error = "<%= error %>";
+            </script>
+
             <a href="/availability" class="link--secondary">Pick another time</a>
                 
-                <h1>Event created</h1>
-                <p>A new event was successfully added to your calendar.</p>
+                <% if (!error) { %>
+                    <h1>Event created</h1>
+                    <p>A new event was successfully added to your calendar.</p>
 
-                <div class="block block--border">
-                    <p>Event details:</p>
-                    <p><strong>Date:</strong> <%= meetingDate %></p>
-                    <p><strong>Time:</strong> <%= start %> to <%= end %></p>
-                </div>
+                    <div class="block block--border">
+                        <p>Event details:</p>
+                        <p><strong>Date:</strong> <%= meetingDate %></p>
+                        <p><strong>Time:</strong> <%= start %> to <%= end %></p>
+                    </div>
+                <% } else { %>
+                    <h1>Event creation failed</h1>
+                    <p>There was an error creating the event. Please try again.</p>
+                    <p><strong>Error:</strong> <%= error %></p>
+                <% } %>
 
             </div>
 

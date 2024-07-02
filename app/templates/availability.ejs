@@ -14,7 +14,7 @@
 
             <a href="/" class="link--secondary">Back to homepage</a>
             
-            <h1>Book an event</h1>
+            <h1>Book an timeslot</h1>
             <p>Pick a day and time that works for you</p>
                 
             <div class="element__wrapper">
@@ -28,6 +28,7 @@
         <script>
 
             const period = <%- JSON.stringify(period) %>;
+            console.log("Period: ", period)
 
             CronofyElements.DateTimePicker({
                 element_token: "<%= element_token %>",
@@ -36,17 +37,28 @@
                 availability_query: {
                     participants: [
                     {
-                        required: "all",
+                        required: "1",
                         members: [
                             { 
-                                sub: "<%= sub %>",
-                                calendar_ids: ["<%= calendar_id %>"],
+                                sub: "apc_667dcf10824ece9a9d03f09e",
                                 managed_availability: true
-                             }
+                            },
+                            { 
+                                sub: "apc_667dd62f79c3b2821cc0ef1d",
+                                managed_availability: true
+                            },
+                            { 
+                                sub: "apc_667e23bca2ce8c75e40e4f99",
+                                managed_availability: true
+                            },
+                            { 
+                                sub: "apc_667e24aea2ce8ce1d454f6c6",
+                                managed_availability: true
+                            },
                         ]
                     }
                 ],
-                required_duration: { minutes: 60 },
+                required_duration: { minutes: 15 },
                 available_periods: [
                     { start: period.start, end: period.end },
                 ]
