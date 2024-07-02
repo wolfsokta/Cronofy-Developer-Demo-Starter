@@ -172,13 +172,15 @@ app.get("/submit", async (req, res) => {
     const userCalendarId = userInfo["cronofy.data"].profiles[0].profile_calendars[0].calendar_id;
     let calendarId = undefined;
 
-    // loop through the subs are available for this slot. Booking the first one that is not the current user.
+    // TODO: Loop through the subs that are available for this slot. 
+    // Booking the first one that is not the current logged in user.
+    // This isn't currently working as expected. The Calendar ID from the slot is not 
+    // the right calendar ID to use in a createEvent call.
     if (slot.participants.length <= 1) {
         calendarId = slot.participants[0].application_calendar_id;
     } else {
-    
         slot.participants.forEach( (user, index) => { 
-            if (userCalendarId === user.application_calendar_id) {
+            if (userCalendarId === user) {
                 return;
             }
             calendarId = user.application_calendar_id;
@@ -187,9 +189,10 @@ app.get("/submit", async (req, res) => {
     console.log("New event on calendar ID: ", calendarId)
 
     // For now just create the event on the logged in user's calendar.
-    calendarId = userCalendarId;
+    calendarId = userCalendarId;  // TODO: 
     
-    // Ensure our client has a valid access token
+    // Ensure our client has a valid access token.
+    // TODO: get an access token for the selected sub
     await refreshToken();
     
     let error = '';
