@@ -8,6 +8,6 @@ const subMap = new Map([
   ]);
 
 
- module.exports = {
-    subMap
+module.exports = {
+  subMap
 };

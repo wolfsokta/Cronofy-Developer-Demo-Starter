@@ -9,7 +9,7 @@ const moment = require("moment");
 
 const dateUtils = require("./dateUtils");
 
-const subMap = require("./subList");
+const {subMap} = require("./subList");
 
 // Enable dotenv
 dotenv.config();
@@ -167,46 +167,52 @@ app.get("/submit", async (req, res) => {
     console.log("Submitted: ", req.query.slot)
     const slot = JSON.parse(req.query.slot);
     console.log("Parsed: ", slot);
-
-    const userInfo = await cronofyClient.userInfo();
-    const userCalendarId = userInfo["cronofy.data"].profiles[0].profile_calendars[0].calendar_id;
-    let calendarId = undefined;
-
     // TODO: Loop through the subs that are available for this slot. 
     // Booking the first one that is not the current logged in user.
     // This isn't currently working as expected. The Calendar ID from the slot is not 
     // the right calendar ID to use in a createEvent call.
+    let targetSubject = undefined;
     if (slot.participants.length <= 1) {
-        calendarId = slot.participants[0].application_calendar_id;
+        targetSubject = slot.participants[0].sub;
     } else {
         slot.participants.forEach( (user, index) => { 
-            if (userCalendarId === user) {
+            if (process.env.SUB === user.sub) {
                 return;
             }
-            calendarId = user.application_calendar_id;
+            targetSubject = user.sub;
         });
     }
-    console.log("New event on calendar ID: ", calendarId)
-
-    // For now just create the event on the logged in user's calendar.
-    calendarId = userCalendarId;  // TODO: 
+    // console.log("New event on calendar ID: ", calendarId)
     
-    // Ensure our client has a valid access token.
-    // TODO: get an access token for the selected sub
-    await refreshToken();
+    
     
     let error = '';
-
+    
     try 
     {
+        // Ensure our client has a valid access token.
+        // TODO: get an access token for the selected sub
+        // await refreshToken();
+        if (targetSubject !== process.env.SUB) {
+            await useAccessToken(targetSubject);
+        }
+        const userInfo = await cronofyClient.userInfo();
+        const userCalendarId = userInfo["cronofy.data"].profiles[0].profile_calendars[0].calendar_id;
+
         await cronofyClient.createEvent({
-            calendar_id: calendarId,
-            event_id: `${calendarId}::${slot.start}`,
+            calendar_id: userCalendarId,
+            event_id: `${userCalendarId}::${slot.start}`,
             summary: "Demo meeting",
             description: "The Cronofy developer demo has created this event",
             start: slot.start,
             end: slot.end
         });
+
+        // Switch our client back to the main user.
+        if (targetSubject !== process.env.SUB) {
+            await useAccessToken(process.env.SUB);
+        }
+
     } catch (err) {
         console.error("Error creating event: ", err);
         error = err.statusCode;
@@ -344,26 +350,21 @@ function refreshAccessToken() {
     }
 }
 
-function setAccessToken(sub) {
-    const refreshToken = subMap.get(sub).refreshToken;
-    
-    return async function() {
-        await cronofyClient.requestAccessToken({
-            client_id: process.env.CLIENT_ID,
-            client_secret: process.env.CLIENT_SECRET,
-            refresh_token: refreshToken
-        }).then((response) => {
-            console.log("Access token created: ", response);
-            obtainedAt = new Date();
-            expiresIn = response.expires_in;
-            expiresAt = new Date(obtainedAt.getTime() + (expiresIn * 1000));
-            console.log ("Expires at: ", expiresAt);
-            cronofyClient.config.access_token = response.access_token;
-        }).catch((err) => {
-            console.error("Error setting access token: ", err);
-        });
+async function useAccessToken(sub) {
+    const refreshToken = subMap.get(sub);
 
-    }
+    await cronofyClient.requestAccessToken({
+        client_id: process.env.CLIENT_ID,
+        client_secret: process.env.CLIENT_SECRET,
+        refresh_token: refreshToken
+    }).then((response) => {
+        console.log("Access token created: ", response);
+        obtainedAt = new Date();
+        expiresIn = response.expires_in;
+        expiresAt = new Date(obtainedAt.getTime() + (expiresIn * 1000));
+        console.log ("Expires at: ", expiresAt);
+        cronofyClient.config.access_token = response.access_token;
+    });
 }
 
 function createCalAccount(shedId) {
