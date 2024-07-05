@@ -61,7 +61,7 @@ app.get("/", async (req, res) => {
             code: codeFromQuery,
             redirect_uri: "http://localhost:7070",
         });
-        console.log(codeResponse);
+        console.log("******** Access Token Code Provided: ", codeResponse);
     }
 
     // Log the user Info
@@ -318,6 +318,11 @@ app.get("/updateAvailability", async (req, res) => {
     res.redirect("/availability_grid?message=" + encodeURIComponent(queryPeriods));
 });
 
+app.get("/timekit", async (req, res) => {
+
+    return res.render("timekit", {message: "Timekit Demo"});
+});
+
 function refreshAccessToken() {
     let obtainedAt = new Date();
     let expiresIn = 0;
@@ -349,12 +354,12 @@ function refreshAccessToken() {
 async function useAccessToken(sub) {
     const refreshToken = subMap.get(sub);
 
-    await cronofyClient.requestAccessToken({
+    await cronofyClient.refreshAccessToken({
         client_id: process.env.CLIENT_ID,
         client_secret: process.env.CLIENT_SECRET,
         refresh_token: refreshToken
     }).then((response) => {
-        console.log("Access token created: ", response);
+        console.log("Access token refreshed: ", response);
         obtainedAt = new Date();
         expiresIn = response.expires_in;
         expiresAt = new Date(obtainedAt.getTime() + (expiresIn * 1000));
